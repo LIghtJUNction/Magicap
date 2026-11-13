@@ -1,7 +1,10 @@
 /dist/
 /.cache/
 /.kam/
-/src/magicap/bin/magicap-*
+/src/magicap/bin/magicap-arm64
+/src/magicap/bin/magicap-amd64
 /src/magicap/bin/magicap
 *.log
 .env
+
+/src/magicap/system/etc/security/cacerts/

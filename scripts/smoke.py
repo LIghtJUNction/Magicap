@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real CLI lifecycle and HTTP/MCP integration, isolated from device state."""
-import json, os, pathlib, socket, subprocess, tempfile, urllib.request, urllib.error, sys
+import json, os, pathlib, socket, subprocess, tempfile, urllib.request, urllib.error, sys, shutil
 root=pathlib.Path(__file__).resolve().parents[1]
 def freeport():
     with socket.socket() as s:
@@ -8,7 +8,8 @@ def freeport():
 with tempfile.TemporaryDirectory(prefix='magicap-smoke-') as d:
     binary=pathlib.Path(d)/'magicap'
     subprocess.run(['go','build','-o',str(binary),'./cmd/magicap'],cwd=root,check=True)
-    env={**os.environ,'MAGICAP_STATE':d+'/state','MAGICAP_ROOT':str(root/'src/magicap')}
+    module=pathlib.Path(d)/'module';shutil.copytree(root/'src/magicap/webroot',module/'webroot')
+    env={**os.environ,'MAGICAP_STATE':d+'/state','MAGICAP_ROOT':str(module)}
     def cli(*args):return subprocess.check_output([str(binary),*args],env=env,text=True)
     web,proxy,mcp=freeport(),freeport(),freeport()
     def request(path,data=None,method=None,extra=None):

@@ -1,0 +1,10 @@
+#!/system/bin/sh
+# Resolve root even when invoked through the module-root cli symlink.
+SELF=$(readlink -f "$0") || exit 1
+MODDIR=${SELF%/bin/*}
+export MAGICAP_ROOT="$MODDIR"
+case "$(uname -m)" in
+  aarch64) exec "$MODDIR/bin/magicap-arm64" "$@" ;;
+  x86_64) exec "$MODDIR/bin/magicap-amd64" "$@" ;;
+  *) printf '%s\n' 'Magicap: unsupported architecture' >&2; exit 1 ;;
+esac

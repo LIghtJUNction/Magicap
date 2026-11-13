@@ -81,6 +81,7 @@ target_dir = "dist"
 output_file = "{{id}}"
 hooks_dir = "hooks"
 exclude = [
+    "system/etc/security/cacerts/*",
     ".git/",
     "target/",
     "node_modules/",
