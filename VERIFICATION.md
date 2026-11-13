@@ -1,4 +1,8 @@
-# Verification — v0.2.0
+# Verification — v0.2.1
+
+## v0.2.1 repository distribution
+
+Added root `module.yaml`, validated against the official KernelSU Modules JSON Schema. Enabled GitHub release immutability and advanced metadata to v0.2.1 / versionCode 5. The capture implementation is unchanged from v0.2.0. `kam check --fail-on-error`, release build and ZIP integrity checks passed locally. `kam verify` reports the absent optional detached signature; this distribution remains unsigned. Repository precheck and review status are tracked in the KernelSU Developer Portal.
 
 ## Android 16 / KernelSU transparent capture
 

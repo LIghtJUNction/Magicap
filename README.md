@@ -2,7 +2,7 @@
 
 Magicap 是面向 Android Root 设备的网络抓包模块，将设备独立证书、HTTP/HTTPS 解密代理、会话观察、请求重放与 MCP 自动化接口整合到同一套工具中。
 
-当前版本为 **v0.2.0**，提供显式代理与按应用 UID 的透明抓包。模块将本机 CA 加入平台信任库，并在抓包期间刷新所选应用的证书挂载。Android 16 / KernelSU 已完成淘宝与微信实机验证，具体范围见 [验证记录](VERIFICATION.md)。
+当前版本为 **v0.2.1**，提供显式代理与按应用 UID 的透明抓包。模块将本机 CA 加入平台信任库，并在抓包期间刷新所选应用的证书挂载。Android 16 / KernelSU 已完成淘宝与微信实机验证，具体范围见 [验证记录](VERIFICATION.md)。
 
 [下载模块](https://github.com/LIghtJUNction/Magicap/releases) · [桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)
 

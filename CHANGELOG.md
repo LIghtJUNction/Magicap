@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1
+
+- Add KernelSU Modules repository metadata and publish an immutable release for repository indexing.
+- Retain the v0.2.0 capture and trust implementation, with release validation performed locally.
+
 ## v0.2.0
 
 - Add per-UID transparent HTTP/TLS capture with HTTP/2, scoped IPv4/IPv6 routes and UDP 443 fallback.

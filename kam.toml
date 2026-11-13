@@ -1,8 +1,8 @@
 [prop]
 id = "magicap"
 name = "Magicap"
-version = "v0.2.0"
-versionCode = 4
+version = "v0.2.1"
+versionCode = 5
 author = "LIghtJUNction"
 description = "Android traffic inspection, local CA, WebUI and MCP"
 updateJson = "https://raw.githubusercontent.com/LIghtJUNction/Magicap/main/update.json"

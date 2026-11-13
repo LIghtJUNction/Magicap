@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/KernelSU-Modules/tools/main/schemas/module.schema.json
+schemaVersion: 1
+id: magicap
+name: Magicap
+summary: 按应用抓取 HTTP/HTTPS 流量，集成本机证书、会话观察、请求重放与 MCP 自动化接口。
+description: README.md
+license: MIT
+homepage: https://github.com/LIghtJUNction/Magicap
+support: https://github.com/LIghtJUNction/Magicap/issues
+tags: [network, tools, debugging]
+metamodule: false
+authors:
+  - name: LIghtJUNction
+    url: https://github.com/LIghtJUNction
+compatibility:
+  androidMinApi: 26
+  architectures: [arm64-v8a, x86_64]
+release:
+  assetPattern: magicap.zip
