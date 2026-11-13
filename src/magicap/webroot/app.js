@@ -1,0 +1,22 @@
+'use strict';
+const $=id=>document.getElementById(id);let secret='',flows=[],selected=null,busy=false;
+const headers=()=>({'Content-Type':'application/json',...(secret?{Authorization:`Bearer ${secret}`}:{})});
+async function api(path,options={}){const r=await fetch(path,{...options,headers:headers()});if(!r.ok)throw Error(await r.text());return r.json()}
+function report(e){$('error').hidden=false;$('error').textContent=e.message}
+function run(fn){return async()=>{try{$('error').hidden=true;await fn()}catch(e){report(e)}}}
+function text(tag,value,cls){const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e}
+function decode(b){try{return new TextDecoder().decode(Uint8Array.from(atob(b||''),c=>c.charCodeAt(0)))}catch{return '[无法解码正文]'}}
+function show(f){selected=f.id;$('detail').replaceChildren(text('h2',`${f.method} · ${f.status||'ERROR'}`),text('p',f.url),text('small',`${f.duration_ms} ms · ${f.started}`));const button=text('button','载入重放');button.onclick=()=>{$('method').value=f.method;$('url').value=f.url;$('body').value=decode(f.request_body);$('headers').value=JSON.stringify(Object.fromEntries(Object.entries(f.request_headers||{}).map(([k,v])=>[k,v.join(', ')])),null,2);switchTab('replay')};$('detail').append(button);for(const [name,value]of [['请求头',f.request_headers],['请求体'+(f.request_truncated?'（已截断）':''),decode(f.request_body)],['响应头',f.response_headers],['响应体'+(f.response_truncated?'（已截断）':''),decode(f.response_body)]]){$('detail').append(text('h3',name),text('pre',typeof value==='string'?value:JSON.stringify(value,null,2)))}if(f.error)$('detail').append(text('pre',f.error));draw()}
+function draw(){$('count').textContent=flows.length;$('flows').replaceChildren();if(!flows.length){$('flows').append(text('p','没有匹配的会话。开启抓包并发送请求后刷新。','empty'));return}for(const f of [...flows].reverse()){const b=text('button','','flow'+(selected===f.id?' selected':''));const m=text('span',`${f.method}   ${f.status||'ERR'}   ${f.duration_ms} ms`,'meta'+(f.status>=400||!f.status?' bad':''));b.append(m,text('span',f.url,'address'));b.onclick=()=>show(f);$('flows').append(b)}}
+async function refresh(){if(busy)return;busy=true;try{const h=await api('/health');$('status').textContent=h.capture?'● 抓包运行中':h.mcp?'● MCP 运行中':'● 服务已就绪';$('proxyPort').textContent=h.proxy_port;flows=await api('/api/sessions?q='+encodeURIComponent($('filter').value));draw()}finally{busy=false}}
+function switchTab(id){for(const e of document.querySelectorAll('.tab'))e.hidden=e.id!==id;for(const b of document.querySelectorAll('[data-tab]'))b.classList.toggle('active',b.dataset.tab===id)}
+for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>switchTab(b.dataset.tab);
+$('refresh').onclick=run(refresh);$('filter').oninput=run(refresh);$('clear').onclick=run(async()=>{await api('/api/sessions',{method:'DELETE'});selected=null;$('detail').replaceChildren();await refresh()});
+async function download(path,name){const r=await fetch(path,{headers:headers()});if(!r.ok)throw Error(await r.text());const u=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+$('har').onclick=run(()=>download('/api/har','magicap.har'));$('ca').onclick=run(()=>download('/api/ca','magicap-ca.pem'));
+$('loadRules').onclick=run(async()=>{$('rulesEditor').value=JSON.stringify(await api('/api/rules'),null,2)});
+$('saveRules').onclick=run(async()=>{const rules=JSON.parse($('rulesEditor').value);await api('/api/rules',{method:'PUT',body:JSON.stringify(rules)})});
+$('exampleRule').onclick=()=>{$('rulesEditor').value=JSON.stringify([{match:'example.com/mock',mock_status:200,mock_body:'{"hello":"Magicap"}',response_headers:{'Content-Type':'application/json'}},{match:'example.com/blocked',block:true}],null,2)};
+$('send').onclick=run(async()=>{$('send').disabled=true;try{const out=await api('/api/replay',{method:'POST',body:JSON.stringify({method:$('method').value,url:$('url').value,headers:JSON.parse($('headers').value),body:$('body').value})});$('replayResult').textContent=JSON.stringify({...out,body:decode(out.body)},null,2)}finally{$('send').disabled=false}});
+$('setSecret').onclick=run(async()=>{secret=$('secret').value;await refresh()});
+if(location.protocol==='file:'){switchTab('setup');$('status').textContent='请打开本机观察台'}else{run(refresh)();setInterval(()=>{if($('live').checked&&document.visibilityState==='visible')run(refresh)()},3000)}
