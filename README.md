@@ -2,7 +2,7 @@
 
 Android Root 抓包模块。提供独立 CA、HTTP/HTTPS 解密代理、WebUI、CLI 与 Streamable HTTP MCP。
 
-**v0.1.0 是可运行的初始版本，尚未达到 HttpCanary（小黄鸟）的完整功能覆盖。** 当前采用显式 HTTP 代理；不是 VPN 抓包应用，不自动接管全部应用流量。功能和设备验证范围见下表。
+**v0.1.1 是早期版本，尚未达到 HttpCanary（小黄鸟）的完整功能覆盖。** 当前采用显式 HTTP 代理；不是 VPN 抓包应用，不自动接管全部应用流量。功能和设备验证范围见下表。
 
 ## 功能
 
@@ -22,7 +22,13 @@ Android Root 抓包模块。提供独立 CA、HTTP/HTTPS 解密代理、WebUI、
 
 不支持：VPN/TUN 全应用抓取、按应用 UID 归因、透明 TLS 转发、证书固定绕过、QUIC/HTTP3 解密、WebSocket 帧分析、实时断点编辑、原始 TCP/UDP 会话解析。长连接和流式响应未专项验证。HTTP/2 能力取决于代理库，本项目尚未进行 HTTP/2 专项验收。
 
-Magisk、KernelSU、APatch 使用模块生命周期；**KernelSU 的系统证书覆盖需要安装挂载元模块**，本模块自身不是元模块。[官方说明](https://kernelsu.org/guide/module.html)。Android 14+ 使用 Conscrypt APEX 的设备可能不会读取 system CA 覆盖，本版不做 APEX/zygote 挂载注入，不承诺系统信任自动生效；可向测试客户端显式导入公钥证书。模块安装、重启后系统证书识别和应用兼容性尚未验收。
+Magisk、KernelSU、APatch 使用模块生命周期；**KernelSU 的系统证书覆盖需要安装挂载元模块**，本模块自身不是元模块。[官方说明](https://kernelsu.org/guide/module.html)。Android 14+ 使用 Conscrypt APEX 的设备可能不会读取 system CA 覆盖，本版不做 APEX/zygote 挂载注入，不承诺系统信任自动生效；可向测试客户端显式导入公钥证书。已在 Android 16 / KernelSU 设备完成 v0.1.0 安装和重启，v0.1.1 热更新后完成 11 项功能测试。仅使用显式信任此 CA 的测试客户端验证 HTTPS 解密，不能据此认定所有应用都信任该证书。
+
+## 界面
+
+暖白纸面、墨色文字与朱砂点缀，中文单语。会话、规则、重放、连接四个页面共用留白充足的侧栏与排版；手机上收为横向导航。所有资源随模块提供，不加载远程字体。
+
+[桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)（使用测试会话拍摄）
 
 ## 安装与使用
 

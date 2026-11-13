@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/LIghtJUNction/Magicap/internal/buildinfo"
 	"github.com/LIghtJUNction/Magicap/internal/capture"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"io"
@@ -72,7 +73,7 @@ func running(c Config) bool {
 		return false
 	}
 	defer r.Body.Close()
-	return r.StatusCode == 200 && r.Header.Get("X-Magicap") == "0.1.0"
+	return r.StatusCode == 200 && r.Header.Get("X-Magicap") == buildinfo.Version
 }
 func stop(c Config) error {
 	b, e := os.ReadFile(filepath.Join(state, "pid"))
@@ -360,7 +361,7 @@ func valid(c Config) error {
 }
 
 type Replay struct {
-	Method  string            `json:"method"`
+	Method  string            `json:"method,omitempty"`
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers,omitempty"`
 	Body    string            `json:"body,omitempty"`
@@ -459,8 +460,8 @@ func serve(c Config) error {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Magicap", "0.1.0")
-		capture.JSON(w, map[string]any{"capture": c.Capture, "mcp": c.MCP, "proxy_port": c.ProxyPort, "web_port": c.WebPort})
+		w.Header().Set("X-Magicap", buildinfo.Version)
+		capture.JSON(w, map[string]any{"capture": c.Capture, "mcp": c.MCP, "proxy_port": c.ProxyPort, "web_port": c.WebPort, "mcp_port": c.MCPPort})
 	})
 	mux.HandleFunc("POST /api/shutdown", func(w http.ResponseWriter, r *http.Request) {
 		capture.JSON(w, map[string]bool{"ok": true})
@@ -507,7 +508,7 @@ func serve(c Config) error {
 	})
 	mux.Handle("/", http.FileServer(http.Dir(filepath.Join(root, "webroot"))))
 	if c.MCP {
-		server := mcp.NewServer(&mcp.Implementation{Name: "magicap", Version: "0.1.0"}, nil)
+		server := mcp.NewServer(&mcp.Implementation{Name: "magicap", Version: buildinfo.Version}, nil)
 		type Query struct {
 			Filter string `json:"filter,omitempty"`
 		}

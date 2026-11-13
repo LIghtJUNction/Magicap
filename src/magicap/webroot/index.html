@@ -1,14 +1,77 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Magicap · 网络观察台</title><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="/">◉ Magicap</a><span>网络观察台</span><span id="status" class="pill">连接中</span></header><main>
-<section class="intro"><div><p class="eyebrow">TRAFFIC INSPECTOR</p><h1>看清每一次连接。</h1><p>本机 HTTP / HTTPS 会话、规则和重放。</p></div><div class="ports">代理 <b>127.0.0.1:<span id="proxyPort">8080</span></b><br><small>数据仅保存在当前进程内，重启后清空。</small></div></section>
-<nav><button data-tab="sessions" class="active">会话 <span id="count">0</span></button><button data-tab="rules">规则</button><button data-tab="replay">重放</button><button data-tab="setup">连接指南</button></nav>
-<p id="error" role="alert" hidden></p>
-<section id="sessions" class="tab"><div class="toolbar"><input id="filter" placeholder="筛选域名或 URL" aria-label="筛选 URL"><button id="refresh">刷新</button><button id="har">导出 HAR</button><button id="clear" class="danger">清空</button><label><input type="checkbox" id="live" checked>实时</label></div><div class="workspace"><div id="flows" class="flows"><p class="empty">等待第一条请求…<br><small>先开启抓包，并将客户端代理指向 Magicap。</small></p></div><article id="detail"><p class="empty">选择一条会话，查看请求和响应。</p></article></div></section>
-<section id="rules" class="tab" hidden><h2>拦截与修改</h2><p>按 URL 子串匹配，支持阻断、请求头修改、响应头修改和模拟响应。</p><textarea id="rulesEditor" spellcheck="false" rows="14" aria-label="规则 JSON">[]</textarea><div class="toolbar"><button id="loadRules">读取规则</button><button id="saveRules" class="primary">保存规则</button><button id="exampleRule">填入示例</button></div><small>规则持久化保存。响应体模拟不连接上游；规则按列表顺序执行。</small></section>
-<section id="replay" class="tab" hidden><h2>构造与重放</h2><div class="toolbar"><select id="method" aria-label="方法"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option></select><input id="url" type="url" placeholder="https://example.com/api" aria-label="请求地址"><button id="send" class="primary">发送</button></div><label>请求头 JSON<textarea id="headers" rows="4">{}</textarea></label><label>请求体<textarea id="body" rows="6"></textarea></label><pre id="replayResult"></pre></section>
-<section id="setup" class="tab" hidden><h2>连接 Magicap</h2><p>使用 root 终端运行：</p><pre>/data/adb/modules/magicap/cli capture enable --port 8080
-/data/adb/modules/magicap/cli mcp enable --port 8765</pre><p>通过 adb 转发到电脑：</p><pre>adb forward tcp:8080 tcp:8080
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f5f2eb">
+  <title>Magicap · 观流</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#content">跳至内容</a>
+  <aside class="rail">
+    <a class="identity" href="#sessions" aria-label="Magicap 首页">
+      <svg class="mark" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M11 35V13l13 15 13-15v22"/><path d="M5 24h8m22 0h8"/><circle cx="24" cy="28" r="3"/></svg>
+      <span>Magicap<small>观流</small></span>
+    </a>
+    <nav aria-label="主导航">
+      <button data-tab="sessions" class="active" aria-current="page"><span class="nav-number">01</span>会话<span id="count" class="nav-count">0</span></button>
+      <button data-tab="rules"><span class="nav-number">02</span>规则<span class="nav-arrow">↗</span></button>
+      <button data-tab="replay"><span class="nav-number">03</span>重放<span class="nav-arrow">↗</span></button>
+      <button data-tab="setup"><span class="nav-number">04</span>连接<span class="nav-arrow">↗</span></button>
+    </nav>
+    <div class="rail-foot"><span class="local-dot"></span>数据留在本机<p>每一次连接，<br>都有迹可循。</p><span class="edition">观流 · 本机</span></div>
+  </aside>
+
+  <main id="content">
+    <header class="masthead"><span>本机网络观察台</span><span id="status" role="status" class="runtime">正在连接</span></header>
+    <section class="hero" aria-labelledby="pageTitle">
+      <div><p id="sectionLabel" class="section-label">连接的切片</p><h1 id="pageTitle">看见<span class="title-indent">流动<span class="title-period">。</span></span></h1><p id="pageIntro" class="hero-caption">让经过的请求，留下清晰的痕迹。</p></div>
+      <div class="hero-note"><div class="orbital" aria-hidden="true"><svg viewBox="0 0 160 160" fill="none"><circle cx="80" cy="80" r="61"/><ellipse cx="80" cy="80" rx="29" ry="61" transform="rotate(38 80 80)"/><path d="M14 132 146 28"/><circle class="orbital-dot" cx="121" cy="48" r="5"/><circle class="orbital-center" cx="80" cy="80" r="3"/></svg></div><span id="heroNote">代理入口</span><code id="proxyAddress">127.0.0.1:<span id="proxyPort">8080</span></code></div>
+    </section>
+
+    <div id="error" role="alert" class="notice" hidden><span id="errorText"></span><button id="dismissError" aria-label="关闭提示">×</button></div>
+    <div id="feedback" role="status" class="feedback" hidden></div>
+
+    <section id="sessions" class="tab" aria-label="会话列表">
+      <div class="section-heading"><div><span class="section-kicker">实时记录</span><span id="sessionTotal" class="total">000</span></div><label class="live-control"><input type="checkbox" id="live" checked><span class="switch" aria-hidden="true"></span>自动刷新</label></div>
+      <div class="toolbar session-tools">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="filter" type="search" placeholder="寻找域名或请求地址" aria-label="筛选会话" autocomplete="off"></label>
+        <div class="tool-actions"><button id="refresh" class="quiet">刷新 <span aria-hidden="true">↻</span></button><button id="har" class="quiet">导出记录 <span aria-hidden="true">↗</span></button><button id="clear" class="quiet muted">清空</button></div>
+      </div>
+      <div class="workspace">
+        <div class="flow-column"><div class="list-heading"><span>请求 / 地址</span><span>状态 · 耗时</span></div><div id="flows" class="flows" aria-label="已捕获的请求"></div></div>
+        <article id="detail" class="detail" aria-label="会话详情"><div class="detail-empty"><span class="small-index">细节在此展开</span><span class="detail-stroke" aria-hidden="true">↙</span><p>选择一条请求，<br>沿着连接往里看。</p><small>请求头、正文与响应，逐一呈现。</small></div></article>
+      </div>
+      <p class="retention">临时留存 <span>最多 500 条 · 正文总量 32 MiB · 单项 1 MiB</span><span>关闭服务后清空</span></p>
+    </section>
+
+    <section id="rules" class="tab editor-page" hidden aria-label="拦截规则">
+      <div class="page-lede"><span class="small-index">在途中，改变方向</span><p>匹配地址中的一段文字，<br>决定放行、修改，或在此回应。</p></div>
+      <div class="editor-heading"><label for="rulesEditor">规则集</label><span>按顺序匹配 · 保存在设备</span></div>
+      <textarea id="rulesEditor" class="code-editor" spellcheck="false" rows="14" aria-label="规则 JSON">[]</textarea>
+      <div class="editor-bottom"><p>支持阻断、修改请求头与响应头、模拟响应。<br>模拟响应不会连接上游服务器。</p><div class="tool-actions"><button id="loadRules" class="quiet">重新读取</button><button id="exampleRule" class="quiet">试用示例</button><button id="saveRules" class="solid">保存规则 <span aria-hidden="true">↗</span></button></div></div>
+    </section>
+
+    <section id="replay" class="tab editor-page" hidden aria-label="请求重放">
+      <div class="page-lede"><span class="small-index">再走一次</span><p>调整方法、地址与正文，<br>看同一条请求，得到怎样的回应。</p></div>
+      <div class="request-line"><select id="method" aria-label="请求方法"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select><input id="url" type="url" placeholder="输入完整请求地址" aria-label="请求地址" spellcheck="false"><button id="send" class="solid">发送 <span aria-hidden="true">↗</span></button></div>
+      <div class="replay-editors"><label><span class="field-label"><span class="field-index">01</span>请求头</span><textarea id="headers" class="code-editor" rows="6" spellcheck="false" aria-label="请求头 JSON">{}</textarea></label><label><span class="field-label"><span class="field-index">02</span>请求正文</span><textarea id="body" class="code-editor" rows="6" spellcheck="false" placeholder="需要时，在这里填写正文"></textarea></label></div>
+      <div class="response-heading"><span class="field-label"><span class="field-index">03</span>响应</span><span id="replayStatus" class="small-index">等待发送</span></div><pre id="replayResult" class="response-output">回应会在这里出现。</pre>
+    </section>
+
+    <section id="setup" class="tab setup-page" hidden aria-label="连接设置">
+      <div class="setup-step"><span class="step-number">01</span><div><h2>让服务开始工作。</h2><p>在设备的超级用户终端中开启抓包。代理只监听本机地址。</p><pre>/data/adb/modules/magicap/cli capture enable --port 8080</pre><p>自动化接口独立开关，默认关闭；需要时再开启。</p><pre>/data/adb/modules/magicap/cli mcp enable --port 8765</pre></div></div>
+      <div class="setup-step"><span class="step-number">02</span><div><h2>把连接引向这里。</h2><p>电脑使用时，通过设备调试桥转发端口。</p><pre>adb forward tcp:8080 tcp:8080
 adb forward tcp:8081 tcp:8081
-adb forward tcp:8765 tcp:8765</pre><p>浏览器或调试客户端设置 HTTP 代理为 127.0.0.1:8080。访问此页面使用 8081 端口；MCP 地址为 http://127.0.0.1:8765/mcp。</p><button id="ca">下载 CA 证书</button><p>系统 CA 通过模块挂载；KernelSU 需要挂载元模块。Android 14+ 的 APEX 信任库尚需设备验证。不自动绕过证书固定，不解密 QUIC，不自动接管所有应用流量。</p><label>API 密钥（默认留空，仅在 cli config 配置后填写）<input id="secret" type="password" autocomplete="off"></label><button id="setSecret">应用到当前页面</button><p>在管理器内打开本地 webroot 时，请使用下方入口。需先通过 CLI 启动服务。</p><a href="http://127.0.0.1:8081">打开本机观察台 →</a></section>
-</main><footer>MAGICAP / LOCAL FIRST <span>最多 500 条会话 · 32 MiB 正文总量 · 单项正文 1 MiB</span></footer><script src="app.js"></script></body></html>
+adb forward tcp:8765 tcp:8765</pre><dl class="endpoints"><div><dt>抓包代理</dt><dd id="setupProxy">127.0.0.1:8080</dd></div><div><dt>观察台</dt><dd id="setupWeb">http://127.0.0.1:8081</dd></div><div><dt>自动化接口</dt><dd id="setupMcp">http://127.0.0.1:8765/mcp</dd></div></dl><p>将测试客户端的代理指向上面的抓包地址，并导入此设备的证书。应用需要支持代理。</p><button id="ca" class="text-link">下载本机证书 <span aria-hidden="true">↓</span></button></div></div>
+      <div class="setup-step"><span class="step-number">03</span><div><h2>密钥，按需设置。</h2><p>默认不设密钥。如果已通过命令行配置，请在此填入。只保留在当前页面中。</p><div class="secret-line"><input id="secret" type="password" placeholder="未配置时留空" aria-label="接口密钥" autocomplete="off"><button id="setSecret" class="solid">应用密钥</button></div></div></div>
+      <div class="setup-footnote"><span>关于证书</span><p>系统证书通过模块挂载；KernelSU 需要挂载元模块。Android 14 及之后版本的 APEX 证书库尚未接入。本模块不会自动绕过证书固定，不解密 QUIC，也不会自动接管所有应用流量。</p></div>
+      <a id="localEntry" class="text-link" href="http://127.0.0.1:8081">在本机浏览器打开观察台 ↗</a>
+    </section>
+    <footer><span>观流 · 只在本机</span><span id="footerStatus">连接尚未建立</span></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

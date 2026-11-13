@@ -42,6 +42,7 @@ with tempfile.TemporaryDirectory(prefix='magicap-smoke-') as d:
         init=rpc('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'smoke','version':'1'}});assert 'result' in init,init
         tools=rpc('tools/list',{});assert 'sessions_list' in [t['name'] for t in tools['result']['tools']],tools
         call=rpc('tools/call',{'name':'sessions_list','arguments':{}});assert not call['result'].get('isError'),call
+        call=rpc('tools/call',{'name':'request_replay','arguments':{'url':'http://magicap.test/mock'}});assert not call['result'].get('isError'),call
         call=rpc('tools/call',{'name':'rules_set','arguments':{'rules':[{'match':'magicap.test/mcp','block':True}]}});assert not call['result'].get('isError'),call
         assert json.load(request('/api/rules'))[0]['match']=='magicap.test/mcp'
         cli('config','--secret','smoke-secret')

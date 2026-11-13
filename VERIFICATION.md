@@ -1,4 +1,36 @@
-# Verification — v0.1.0
+# Verification — v0.1.1
+
+## Android 16 / KernelSU device
+
+The previously installed v0.1.0 module completed a real reboot and was visible at `/data/adb/modules/magicap`. For v0.1.1, WebUI/scripts were synchronized through `kam dev --sync-only --hot`; built binaries and module metadata were updated in place while the daemon was stopped. Device and local arm64 binary SHA-256 matched. No additional reboot was performed for the hot update.
+
+Eleven installed-module acceptance checks passed:
+
+1. CLI enable is idempotent and reports the active capture state.
+2. Real HTTP forwarding to a controlled host server preserves the request body.
+3. Request and response header rewriting, blocking and mocking work.
+4. A real HTTP request can be replayed through the proxy.
+5. A response larger than 1 MiB reaches the client intact, while the captured body is bounded and marked truncated.
+6. A real request to `https://example.com` succeeds using the device CA as the client's trust root; captured response contains the expected plaintext.
+7. The device serves WebUI HTML and the public CA certificate.
+8. HAR 1.2 export includes the captured sessions.
+9. MCP starts idempotently on custom port 28765, initializes, lists seven tools and successfully calls request replay without a method parameter.
+10. Optional Bearer authentication rejects a missing key and accepts the configured key.
+11. The real device tcpdump produces a nonempty PCAP containing test traffic.
+
+The first v0.1.0 run exposed an MCP schema inconsistency: method was mandatory in the generated schema despite the implementation defaulting to GET. Fixed via `omitempty`, covered by local MCP integration and retested successfully on the device.
+
+Tests restored original config/rules and the disabled capture/MCP state, removed test forwards/reverse mappings and test PCAP, and confirmed that the public CA identity had not changed. No system proxy or APEX trust-store settings were modified. The system CA overlay matches the generated CA; the APEX store does not contain it. These tests do not establish arbitrary-app trust or full HttpCanary parity.
+
+## WebUI and local checks
+
+Real headless Chromium was driven through its debugging protocol at desktop 1440×1100 and mobile 393×920. Checks covered connection, five fixture sessions, details, all four tabs, rule edit/save, replay, URL filtering and clear. No JavaScript exceptions or horizontal overflow on the four mobile pages. Desktop and mobile screenshots were visually inspected; preview images in docs use synthetic test sessions.
+
+`go test -race ./...`, `go vet ./...`, `python scripts/smoke.py`, JavaScript syntax, Kam validation/check, release build, ZIP integrity and payload checks passed. The existing vendored kamfw still emits style/lint warnings. Runtime version information is injected from kam.toml by the build hook.
+
+## Earlier initial-build record
+
+### v0.1.0 local packaging record
 
 Validation performed locally on 2026-11-13. No automatic CI was configured or triggered.
 

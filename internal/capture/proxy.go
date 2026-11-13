@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/LIghtJUNction/Magicap/internal/buildinfo"
 	"github.com/elazarl/goproxy"
 	"io"
 	"net/http"
@@ -204,7 +205,7 @@ func (s *Store) HAR() any {
 		}
 		entries = append(entries, map[string]any{"startedDateTime": f.Started.Format(time.RFC3339Nano), "time": f.DurationMS, "request": map[string]any{"method": f.Method, "url": f.URL, "httpVersion": "HTTP/1.1", "headers": headers(f.RequestHeaders), "queryString": []any{}, "cookies": []any{}, "headersSize": -1, "bodySize": len(f.RequestBody), "postData": map[string]any{"mimeType": f.RequestHeaders.Get("Content-Type"), "text": string(f.RequestBody)}}, "response": map[string]any{"status": f.Status, "statusText": http.StatusText(f.Status), "httpVersion": "HTTP/1.1", "headers": headers(f.ResponseHeaders), "cookies": []any{}, "content": map[string]any{"size": len(f.ResponseBody), "mimeType": f.ResponseHeaders.Get("Content-Type"), "text": base64.StdEncoding.EncodeToString(f.ResponseBody), "encoding": "base64"}, "redirectURL": "", "headersSize": -1, "bodySize": len(f.ResponseBody)}, "cache": map[string]any{}, "timings": map[string]any{"send": 0, "wait": f.DurationMS, "receive": 0}, "_magicap": map[string]any{"requestTruncated": f.RequestTruncated, "responseTruncated": f.ResponseTruncated, "error": f.Error}})
 	}
-	return map[string]any{"log": map[string]any{"version": "1.2", "creator": map[string]string{"name": "Magicap", "version": "0.1.0"}, "entries": entries}}
+	return map[string]any{"log": map[string]any{"version": "1.2", "creator": map[string]string{"name": "Magicap", "version": buildinfo.Version}, "entries": entries}}
 }
 func JSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
