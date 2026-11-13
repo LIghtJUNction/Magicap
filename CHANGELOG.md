@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0
+
+- Add per-UID transparent HTTP/TLS capture with HTTP/2, scoped IPv4/IPv6 routes and UDP 443 fallback.
+- Add Conscrypt APEX CA merging, selected-process namespace repair and reversible trust commands.
+- Preserve sessions on repeated enable, clean owned routes on shutdown, and verify Taobao and WeChat capture on Android 16 / KernelSU.
+- Record MMTLS encrypted payload limits separately from standard HTTPS interception.
+
 ## v0.1.2
 
 - Make `block` optional in MCP rule input, aligning mock and header-rewrite rules with REST behavior and the existing false default.

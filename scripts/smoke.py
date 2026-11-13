@@ -26,6 +26,7 @@ with tempfile.TemporaryDirectory(prefix='magicap-smoke-') as d:
         request('/api/rules',[{'match':'magicap.test/mock','mock_status':201,'mock_body':'hello'}],'PUT').close()
         out=json.load(request('/api/replay',{'url':'http://magicap.test/mock'},'POST'));assert out['status']==201
         flows=json.load(request('/api/sessions'));assert len(flows)==1 and flows[0]['status']==201
+        cli('capture','enable');assert len(json.load(request('/api/sessions')))==1
         assert json.load(request('/api/har'))['log']['version']=='1.2'
         assert b'Magicap' in request('/').read()
         try:request('/api/sessions',extra={'Origin':'https://evil.invalid'})

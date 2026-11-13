@@ -2,7 +2,7 @@
 
 Magicap 是面向 Android Root 设备的网络抓包模块，将设备独立证书、HTTP/HTTPS 解密代理、会话观察、请求重放与 MCP 自动化接口整合到同一套工具中。
 
-当前版本为 **v0.1.2**，采用显式 HTTP 代理。客户端配置代理并信任本机 CA 后，即可通过 WebUI、CLI 或 MCP 查看和处理经过代理的请求。Android 16 / KernelSU 设备已完成 14 项功能测试，详细过程见 [验证记录](VERIFICATION.md)。
+当前版本为 **v0.2.0**，提供显式代理与按应用 UID 的透明抓包。模块将本机 CA 加入平台信任库，并在抓包期间刷新所选应用的证书挂载。Android 16 / KernelSU 已完成淘宝与微信实机验证，具体范围见 [验证记录](VERIFICATION.md)。
 
 [下载模块](https://github.com/LIghtJUNction/Magicap/releases) · [桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)
 
@@ -11,8 +11,8 @@ Magicap 是面向 Android Root 设备的网络抓包模块，将设备独立证�
 | 能力 | 实现方式 |
 | --- | --- |
 | 设备独立证书 | 首次安装时生成 RSA-3072 CA，私钥以 `0600` 权限保存在设备中 |
-| 系统证书挂载 | 生成 `system/etc/security/cacerts/<subject_hash_old>.0`，由 Root 管理器提供系统目录覆盖 |
-| HTTP/HTTPS 解密 | 使用显式代理与 CONNECT TLS 解密，同时校验上游服务器证书 |
+| 系统证书挂载 | 生成 `system/etc/security/cacerts/<subject_hash_old>.0`，提供系统目录覆盖，并合并 Conscrypt APEX 平台证书 |
+| HTTP/HTTPS 解密 | 支持显式代理、CONNECT 和按应用透明 TLS，校验上游证书 |
 | 会话观察 | 按 URL 筛选，查看请求头、响应头、正文、状态码与耗时 |
 | 请求规则 | 按 URL 子串匹配，支持阻断、修改请求头和响应头、模拟响应；规则持久化保存 |
 | 构造与重放 | 自定义请求方法、地址、请求头和正文，也可从已有会话载入请求 |
@@ -65,8 +65,9 @@ cd /data/adb/modules/magicap
 | HTTP/HTTPS 代理 | `127.0.0.1:8080` |
 | WebUI | `http://127.0.0.1:8081` |
 | MCP | `http://127.0.0.1:8765/mcp` |
+| 应用透明 TLS | `127.0.0.1:8443`，按应用启用时监听 |
 
-三个服务分别使用独立端口，可选范围为 `1024–65535`。启用状态、端口和规则跨启动保存；调整运行配置时，进程重启，会话重新开始记录。
+四个监听入口分别使用独立端口，可选范围为 `1024–65535`。启用状态、端口和规则跨启动保存；调整运行配置时，进程重启，会话重新开始记录。
 
 ```sh
 # 调整端口
@@ -102,9 +103,27 @@ adb forward tcp:8765 tcp:8765
 ./cli cert export
 ```
 
-系统证书覆盖的读取方式取决于 Android 版本和应用使用的信任库。对于 Android 14 及之后版本的 Conscrypt APEX 信任库，当前使用方式为：向测试客户端显式导入 CA，并通过客户端的信任配置建立 HTTPS 解密连接。APEX/zygote 证书注入属于独立扩展项。
+Android 14 及之后版本使用 Conscrypt APEX 证书挂载；挂载保留现有平台根证书，并加入本机 CA。抓包进程会检查所选 UID 的新进程，为独立挂载空间补充证书。平台证书挂载支持手动启用和回退：
 
-实机验证覆盖 Android 16 / KernelSU 环境：v0.1.0 已完成安装与重启，v0.1.1 已完成用户重启后的检查，v0.1.2 热更新后通过 14 项功能测试。HTTPS 验收使用显式信任本机 CA 的客户端；其他应用的适配以各自的代理和证书信任配置为依据。
+```sh
+./cli cert trust
+./cli cert untrust
+```
+
+### 按应用透明抓包
+
+```sh
+./cli app enable com.taobao.taobao
+./cli app status
+./cli app disable com.taobao.taobao
+./cli config --transparent-port 8443
+```
+
+启用后，应用 UID 的 TCP 80/443 重定向至本机代理，UDP 443 经拒绝触发客户端 TCP 回退。IPv6 NAT 可用时同样重定向；其余设备对所选 UID 的 IPv6 TCP 80/443 连接进行拒绝，由客户端尝试 IPv4。规则集中在 `MAGICAP_OUT` 和 `MAGICAP_QUIC` 链，停用应用或停止服务时清理。
+
+透明 TLS 使用 SNI 确定主机，支持 HTTP/1.1 和 HTTP/2。标准平台证书校验适用本机 CA；证书固定、自带信任库、自定义协议、其他端口和业务层加密需要各自适配。微信实测可读取头像等标准 HTTPS，请求 `/mmtls/…` 的正文保持协议加密形式。淘宝实测已读取首页相关 HTTPS 请求与响应。
+
+首次安装时证书挂载启用，抓包与 MCP 保持关闭。`cert untrust` 同时暂停已配置的应用抓包，`app enable` 重新建立信任与抓包设置。设备实测使用热更新，完整重启验收记录随各版本单独列出。
 
 ## CLI 常用操作
 
@@ -188,7 +207,7 @@ kam mcp status --json
 
 当前交付能力集中在显式 HTTP/HTTPS 代理、会话观察、规则处理、重放、HAR 导出与 tcpdump PCAP 抓取。
 
-VPN/TUN 全应用抓取、按应用 UID 归因、透明 TLS 转发、证书固定绕过、QUIC/HTTP3 解密、WebSocket 帧分析、实时断点编辑和原始 TCP/UDP 会话解析均属于独立扩展项。HTTP/2、长连接与流式响应的兼容性以对应专项验收为依据。当前版本的功能与验证范围见上文及 [验证记录](VERIFICATION.md)。
+VPN/TUN 全应用抓取、逐条会话 UID 标记、证书固定适配、QUIC/HTTP3 解密、WebSocket 帧分析、实时断点编辑和原始 TCP/UDP 会话解析属于独立扩展项。透明代理 HTTP/2 已通过本地专项测试；长连接与流式响应的兼容性以对应专项验收为依据。当前版本的功能与验证范围见上文及 [验证记录](VERIFICATION.md)。
 
 ## 本地构建
 

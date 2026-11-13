@@ -1,4 +1,16 @@
-# Verification — v0.1.2
+# Verification — v0.2.0
+
+## Android 16 / KernelSU transparent capture
+
+Development binaries were hot-updated on the existing boot. Platform TrustManager reported 152 anchors including Magicap, compared with 151 after `cert untrust`; enabling trust restored 152. Existing platform anchors were retained. Selected app namespaces initially omitted the CA under root-manager mount isolation; a UID-scoped watcher repairs these namespaces while capture runs.
+
+Taobao 10.69.0: the initial decrypted sample contained 93 sessions, including 61 HTTPS requests. Standard TLS traffic included `acs.m.taobao.com` and homepage resources. A final cold launch captured 61 sessions including 49 HTTPS requests, with automatic namespace repair and no manual per-process injection. Repeated app enable preserved the daemon PID and sessions; stopping removed the owned NAT chain and restarting restored capture. Only selected UIDs receive OUTPUT redirects; system proxy settings remain unchanged.
+
+WeChat 8.0.79: baseline UID-scoped outgoing capture recorded 768 packets and 73 `/mmtls/` requests. During interception, 67 sessions were observed: 15 HTTPS requests (13 successful responses: 12 avatar resources and one map request; two canceled requests), plus 52 HTTP `/mmtls/` requests whose bodies remain encrypted binary frames. This verifies ordinary HTTPS interception, not message plaintext recovery. Temporary WeChat routes were removed and WeChat relaunched normally; Taobao capture was restored. Raw traffic remains in ignored private local storage.
+
+Local tests cover real transparent HTTP, TLS HTTP/1.1 and negotiated HTTP/2 with trusted upstream certificates. Existing proxy/MCP tests and idempotent capture enable regression remain included. The release uses device hot update; v0.2.0 full reboot acceptance is pending.
+
+## Historical v0.1.2 verification
 
 ## Post-reboot acceptance and v0.1.2 repair
 
