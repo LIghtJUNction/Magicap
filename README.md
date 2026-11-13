@@ -1,86 +1,163 @@
 # Magicap
 
-Android Root 抓包模块。提供独立 CA、HTTP/HTTPS 解密代理、WebUI、CLI 与 Streamable HTTP MCP。
+Magicap 是面向 Android Root 设备的网络抓包模块，将设备独立证书、HTTP/HTTPS 解密代理、会话观察、请求重放与 MCP 自动化接口整合到同一套工具中。
 
-**v0.1.1 是早期版本，尚未达到 HttpCanary（小黄鸟）的完整功能覆盖。** 当前采用显式 HTTP 代理；不是 VPN 抓包应用，不自动接管全部应用流量。功能和设备验证范围见下表。
+当前版本为 **v0.1.1**，采用显式 HTTP 代理。客户端配置代理并信任本机 CA 后，即可通过 WebUI、CLI 或 MCP 查看和处理经过代理的请求。Android 16 / KernelSU 设备已完成 11 项功能测试，详细过程见 [验证记录](VERIFICATION.md)。
+
+[下载模块](https://github.com/LIghtJUNction/Magicap/releases) · [桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)
 
 ## 功能
 
-| 能力 | 当前实现 |
+| 能力 | 实现方式 |
 | --- | --- |
-| 抓包证书 | 首次安装在设备生成独立 RSA-3072 CA，私钥权限 0600，不打包共享私钥 |
-| 系统 CA | 安装时生成 `system/etc/security/cacerts/<subject_hash_old>.0`，通过模块挂载 |
-| HTTP / HTTPS | 显式 HTTP 代理、CONNECT TLS 解密，正常验证上游服务器证书 |
-| 会话观察 | URL 筛选、请求/响应头、二进制安全的正文、状态码、耗时 |
-| 规则 | URL 子串匹配；阻断、修改请求头/响应头、模拟响应；保存到设备 |
-| 请求工具 | 自定义方法、请求头、请求体；从会话载入重放 |
-| 导出 | HAR 1.2；响应正文 base64，包含截断标记 |
-| PCAP | `cli pcap` 调用设备已有的 tcpdump，支持网卡、BPF 过滤与时长；不内置 tcpdump |
-| MCP | 官方 Go SDK，默认关闭，支持自定义端口和可选 Bearer 密钥 |
-| 限额 | 最多 500 条会话、32 MiB 捕获正文总量、单方向正文 1 MiB；会话仅在内存中 |
-| ABI | Android arm64-v8a、x86_64，最低 API 26 |
+| 设备独立证书 | 首次安装时生成 RSA-3072 CA，私钥以 `0600` 权限保存在设备中 |
+| 系统证书挂载 | 生成 `system/etc/security/cacerts/<subject_hash_old>.0`，由 Root 管理器提供系统目录覆盖 |
+| HTTP/HTTPS 解密 | 使用显式代理与 CONNECT TLS 解密，同时校验上游服务器证书 |
+| 会话观察 | 按 URL 筛选，查看请求头、响应头、正文、状态码与耗时 |
+| 请求规则 | 按 URL 子串匹配，支持阻断、修改请求头和响应头、模拟响应；规则持久化保存 |
+| 构造与重放 | 自定义请求方法、地址、请求头和正文，也可从已有会话载入请求 |
+| HAR 导出 | 输出 HAR 1.2，响应正文采用 base64 编码，并记录正文截断状态 |
+| PCAP 抓取 | 调用设备上的 tcpdump，支持网卡选择、BPF 过滤和抓取时长设置 |
+| MCP 自动化 | 使用官方 Go SDK 提供 Streamable HTTP 接口，支持自定义端口与可选 Bearer 密钥 |
 
-不支持：VPN/TUN 全应用抓取、按应用 UID 归因、透明 TLS 转发、证书固定绕过、QUIC/HTTP3 解密、WebSocket 帧分析、实时断点编辑、原始 TCP/UDP 会话解析。长连接和流式响应未专项验证。HTTP/2 能力取决于代理库，本项目尚未进行 HTTP/2 专项验收。
+会话保存在进程内存中，容量为 **500 条记录、32 MiB 捕获正文总量、单方向正文 1 MiB**。达到容量后按先后顺序淘汰记录；服务重启时清空会话。
 
-Magisk、KernelSU、APatch 使用模块生命周期；**KernelSU 的系统证书覆盖需要安装挂载元模块**，本模块自身不是元模块。[官方说明](https://kernelsu.org/guide/module.html)。Android 14+ 使用 Conscrypt APEX 的设备可能不会读取 system CA 覆盖，本版不做 APEX/zygote 挂载注入，不承诺系统信任自动生效；可向测试客户端显式导入公钥证书。已在 Android 16 / KernelSU 设备完成 v0.1.0 安装和重启，v0.1.1 热更新后完成 11 项功能测试。仅使用显式信任此 CA 的测试客户端验证 HTTPS 解密，不能据此认定所有应用都信任该证书。
+模块提供 **arm64-v8a、x86_64** 两种 Android 架构的程序，最低系统版本为 **API 26**。
 
 ## 界面
 
-暖白纸面、墨色文字与朱砂点缀，中文单语。会话、规则、重放、连接四个页面共用留白充足的侧栏与排版；手机上收为横向导航。所有资源随模块提供，不加载远程字体。
+WebUI 以暖白纸面、墨色文字和朱砂点缀呈现中文单语界面，通过留白、字级和少量分隔线组织信息。桌面使用侧栏导航，手机使用横向导航；字体取自设备系统，页面资源随模块提供。
 
-[桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)（使用测试会话拍摄）
+- **会话**：浏览连接记录，展开请求与响应细节，筛选并导出数据。
+- **规则**：编辑、读取和保存规则，调整请求经过代理时的处理方式。
+- **重放**：构造请求或载入已有会话，查看新的响应结果。
+- **连接**：查看启动步骤、代理地址、证书下载入口与密钥设置。
 
-## 安装与使用
+预览图片使用测试会话拍摄：[桌面界面](docs/preview-desktop.png) · [手机界面](docs/preview-mobile.png)。
 
-从 [Releases](https://github.com/LIghtJUNction/Magicap/releases) 下载 `magicap.zip`，通过 Root 管理器安装后重启。
+## 安装与连接
 
-模块根目录：`/data/adb/modules/magicap`。固定入口 `cli -> bin/magicap-cli`，根据 ABI 调用原生 Go 程序。
+从 [Releases](https://github.com/LIghtJUNction/Magicap/releases) 下载 `magicap.zip`，通过 Magisk、KernelSU 或 APatch 管理器安装，然后重启设备。
 
-首次安装时抓包和 MCP 均关闭，无 secret key，所有监听仅绑定 `127.0.0.1`。
+KernelSU 的系统证书覆盖需要挂载元模块配合，具体机制见 [KernelSU 模块指南](https://kernelsu.org/guide/module.html)。Magicap 作为普通模块安装。
+
+模块目录为 `/data/adb/modules/magicap`。统一命令入口 `cli -> bin/magicap-cli` 根据设备架构调用对应的 Go 程序。
+
+### 启动服务
+
+首次安装时，抓包与 MCP 均处于关闭状态，密钥配置默认为空。服务绑定设备本机地址 `127.0.0.1`，由用户按需开启。
 
 ```sh
 su
 cd /data/adb/modules/magicap
+
+# 开启抓包并查看状态
 ./cli capture enable --port 8080
 ./cli status
+
+# 开启 MCP 并读取机器可解析的状态
 ./cli mcp enable --port 8765
 ./cli mcp status --json
+```
+
+| 服务 | 默认地址 |
+| --- | --- |
+| HTTP/HTTPS 代理 | `127.0.0.1:8080` |
+| WebUI | `http://127.0.0.1:8081` |
+| MCP | `http://127.0.0.1:8765/mcp` |
+
+三个服务分别使用独立端口，可选范围为 `1024–65535`。启用状态、端口和规则跨启动保存；调整运行配置时，进程重启，会话重新开始记录。
+
+```sh
+# 调整端口
+./cli config --web-port 8081 --proxy-port 8080 --mcp-port 8765
+
+# 按需关闭服务
 ./cli mcp disable
 ./cli capture disable
 ```
 
-MCP 状态字段固定为 `enabled`、`running`、`pid`、`host`、`port`、`endpoint`、`transport`，端点 `http://127.0.0.1:8765/mcp`，传输为 `streamable-http`。
+`start` 按当前配置启动进程，`stop` 停止进程并保留启用设置，`boot` 根据抓包或 MCP 的启用设置执行启动。
 
-设备代理端口默认 8080，WebUI 默认 8081，MCP 默认 8765。端口范围 1024–65535，三个端口不得重复。启用状态、端口和规则跨启动保存；修改运行配置会重启进程并清空内存会话。`start` 仅启动配置中的服务，`stop` 停止进程但保留启用意图，`boot` 仅在抓包或 MCP 已启用时启动。
+### 连接电脑或测试客户端
+
+在电脑上执行端口转发：
 
 ```sh
-# 在电脑运行，转发到设备本机地址
 adb forward tcp:8080 tcp:8080
 adb forward tcp:8081 tcp:8081
 adb forward tcp:8765 tcp:8765
 ```
 
-电脑访问 `http://127.0.0.1:8081`。浏览器或调试客户端的 HTTP/HTTPS 代理设为 `127.0.0.1:8080`，并信任此设备的 CA。设备上的应用必须自行支持代理并配置连接；不会自动修改系统代理。模块包含 `webroot/`，管理器本地页面提供进入观察台的链接；完整会话界面由本机 HTTP 服务提供。
+访问 `http://127.0.0.1:8081` 打开观察台，将浏览器或调试客户端的 HTTP/HTTPS 代理设为 `127.0.0.1:8080`，并导入本机 CA。设备端应用同样通过自身的代理设置接入。
+
+模块的 `webroot/` 提供管理器本地页面与观察台入口，完整会话界面由本机 HTTP 服务呈现。系统代理设置由用户或客户端管理。
+
+### 证书与信任
+
+每台设备在安装时生成自己的 CA，证书公钥可通过 WebUI 下载或通过 CLI 导出：
 
 ```sh
-./cli config --web-port 8081 --proxy-port 8080 --mcp-port 8765
-./cli config --secret 'optional-key'
-./cli config --secret ''   # 恢复无密钥
-./cli cert export         # 仅输出 CA 公钥 PEM，不输出私钥
+# 输出 CA 公钥证书，格式为 PEM
+./cli cert export
+```
+
+系统证书覆盖的读取方式取决于 Android 版本和应用使用的信任库。对于 Android 14 及之后版本的 Conscrypt APEX 信任库，当前使用方式为：向测试客户端显式导入 CA，并通过客户端的信任配置建立 HTTPS 解密连接。APEX/zygote 证书注入属于独立扩展项。
+
+实机验证覆盖 Android 16 / KernelSU 环境：v0.1.0 已完成安装与重启，v0.1.1 热更新后通过 11 项功能测试。HTTPS 验收使用显式信任本机 CA 的客户端；其他应用的适配以各自的代理和证书信任配置为依据。
+
+## CLI 常用操作
+
+```sh
+# 筛选会话
 ./cli sessions example.com
+
+# 导出 HAR
 ./cli har > /sdcard/Download/magicap.har
+
+# 重放请求
 ./cli replay '{"method":"GET","url":"https://example.com"}'
+
+# 配置模拟与阻断规则
 ./cli rules '[{"match":"example.com/mock","mock_status":200,"mock_body":"hello"},{"match":"example.com/blocked","block":true}]'
+
+# 抓取 PCAP
 ./cli pcap --interface any --seconds 60 --filter 'tcp port 443'
 ```
 
-配置密钥后，WebUI 在“连接指南”填写密钥；REST API 和 MCP 使用 `Authorization: Bearer <key>`。密钥仅在页面内存中保存。无密钥为用户指定默认值，本机其他应用能否连接取决于设备访问控制。拒绝跨来源 Origin 和非本机 Host。
+PCAP 抓取需要 Root 权限，以及 `PATH` 中可执行的 tcpdump。单次上限为 3600 秒或 100000 个数据包，输出路径由 CLI 返回。BPF 表达式作为命令参数直接传递；生成的 PCAP 由用户按需归档和清理。
 
-PCAP 需要 root 和 `PATH` 中可执行的 tcpdump，最多 3600 秒或 100000 包，输出路径由 CLI 返回；BPF 表达式直接传参，不通过 shell。PCAP 文件不会自动删除，请自行管理占用。
+### 可选密钥
 
-## MCP 工具
+```sh
+# 设置 Bearer 密钥
+./cli config --secret 'optional-key'
 
-`sessions_list`、`sessions_clear`、`har_export`、`request_replay`、`rules_list`、`rules_set`、`capture_status`。重放需先开启抓包。会话 JSON 的请求和响应正文字段为 base64。
+# 将密钥配置恢复为空
+./cli config --secret ''
+```
+
+配置密钥后，在 WebUI 的“连接”页填写相同密钥；REST API 与 MCP 使用 `Authorization: Bearer <key>`。页面中的密钥保存在当前页面内存中。
+
+服务校验本机 Host 与同源 Origin。本机其他应用的连接权限由设备访问控制策略决定。
+
+## MCP 自动化
+
+MCP 使用 `streamable-http` 传输，默认端点为 `http://127.0.0.1:8765/mcp`。`cli mcp status --json` 提供固定字段：`enabled`、`running`、`pid`、`host`、`port`、`endpoint`、`transport`。
+
+| 工具 | 用途 |
+| --- | --- |
+| `sessions_list` | 查询捕获的会话 |
+| `sessions_clear` | 清空内存会话 |
+| `har_export` | 导出 HAR |
+| `request_replay` | 通过已开启的抓包代理重放请求，方法默认为 GET |
+| `rules_list` | 读取规则 |
+| `rules_set` | 保存并应用规则 |
+| `capture_status` | 查询抓包与 MCP 运行配置 |
+
+会话 JSON 的请求正文和响应正文字段采用 base64 编码。
+
+Kam 提供统一的转发与启用入口：
 
 ```sh
 kam mcp forward
@@ -88,15 +165,34 @@ kam mcp enable
 kam mcp status --json
 ```
 
-`kam.toml` 中 `[dev.mcp].enabled = false`，安装时不会自动启动 MCP；显式 `kam mcp enable` 或 `cli mcp enable` 才会启用。
+`kam.toml` 中 `[dev.mcp].enabled = false`，MCP 由 `kam mcp enable` 或 `cli mcp enable` 显式开启。
 
 ## 数据与卸载
 
-设备状态位于 `/data/adb/magicap/`：`config.json`、`rules.json`、`certs/ca.pem`、`certs/ca.key`、`daemon.log`、`captures/`。私钥不通过 WebUI/API/MCP 暴露。守护日志每次启动重置。卸载停止服务，管理器移除模块证书覆盖；保留状态目录以免意外丢失 CA 身份和 PCAP。彻底清除时先卸载并确认不再需要数据，再自行删除该目录。重新生成 CA 后需重装/重启并更新客户端信任。
+设备状态集中保存在 `/data/adb/magicap/`：
+
+| 路径 | 内容 |
+| --- | --- |
+| `config.json` | 服务启用状态、端口与密钥配置 |
+| `rules.json` | 持久化规则 |
+| `certs/ca.pem` | CA 公钥证书 |
+| `certs/ca.key` | 设备本地 CA 私钥，权限为 `0600` |
+| `daemon.log` | 当前启动周期的守护进程日志 |
+| `captures/` | PCAP 抓取文件 |
+
+证书下载与导出接口提供 CA 公钥，私钥保存在设备状态目录。守护日志在每次启动时重置。
+
+卸载时停止服务，由管理器移除模块证书覆盖；状态目录继续保留，便于保存 CA 身份和抓取文件。彻底清理时，先归档所需材料，再删除状态目录。重新生成 CA 后，重新安装或重启模块，并更新客户端的信任配置。
+
+## 适用范围
+
+当前交付能力集中在显式 HTTP/HTTPS 代理、会话观察、规则处理、重放、HAR 导出与 tcpdump PCAP 抓取。
+
+VPN/TUN 全应用抓取、按应用 UID 归因、透明 TLS 转发、证书固定绕过、QUIC/HTTP3 解密、WebSocket 帧分析、实时断点编辑和原始 TCP/UDP 会话解析均属于独立扩展项。HTTP/2、长连接与流式响应的兼容性以对应专项验收为依据。当前版本的功能与验证范围见上文及 [验证记录](VERIFICATION.md)。
 
 ## 本地构建
 
-依赖 Go 1.27.4、Kam 0.6.12+、Android NDK（x86_64 构建需要，设置 `ANDROID_NDK_HOME`）。无需 Node 包管理器或 Rust。
+构建环境采用 Go 1.27.4、Kam 0.6.12+ 和 Android NDK。x86_64 构建通过 `ANDROID_NDK_HOME` 指定 NDK 路径；WebUI 使用随模块提供的静态页面资源。
 
 ```sh
 go test -race ./...
@@ -108,6 +204,8 @@ kam build
 unzip -t dist/magicap.zip
 ```
 
-本地构建同时产出两个 Android ABI，模块 ZIP 为 `dist/magicap.zip`。日常检查在本地运行，不配置自动 CI。具体结果见 [VERIFICATION.md](VERIFICATION.md)。
+构建同时生成两个 Android 架构的程序，模块 ZIP 位于 `dist/magicap.zip`。日常验证在本地完成，结果记录于 [VERIFICATION.md](VERIFICATION.md)。
 
-代理使用 [GoProxy](https://github.com/elazarl/goproxy)，MCP 使用 [官方 Go SDK](https://github.com/modelcontextprotocol/go-sdk)，模块使用 Kam 和随模板提供的 kamfw。运行时默认值和 CA 信任边界参考 [MagicNet](https://github.com/LIghtJUNction/MagicNet)；各依赖许可证见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+## 项目依赖
+
+代理基于 [GoProxy](https://github.com/elazarl/goproxy)，MCP 基于 [官方 Go SDK](https://github.com/modelcontextprotocol/go-sdk)，模块通过 Kam 与模板自带的 kamfw 构建和运行。默认运行方式与证书信任边界参考 [MagicNet](https://github.com/LIghtJUNction/MagicNet)。依赖版本及许可证见 [THIRD_PARTY.md](THIRD_PARTY.md)。
