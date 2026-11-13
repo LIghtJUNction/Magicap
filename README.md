@@ -2,7 +2,7 @@
 
 Magicap 是面向 Android Root 设备的网络抓包模块，将设备独立证书、HTTP/HTTPS 解密代理、会话观察、请求重放与 MCP 自动化接口整合到同一套工具中。
 
-当前版本为 **v0.1.1**，采用显式 HTTP 代理。客户端配置代理并信任本机 CA 后，即可通过 WebUI、CLI 或 MCP 查看和处理经过代理的请求。Android 16 / KernelSU 设备已完成 11 项功能测试，详细过程见 [验证记录](VERIFICATION.md)。
+当前版本为 **v0.1.2**，采用显式 HTTP 代理。客户端配置代理并信任本机 CA 后，即可通过 WebUI、CLI 或 MCP 查看和处理经过代理的请求。Android 16 / KernelSU 设备已完成 14 项功能测试，详细过程见 [验证记录](VERIFICATION.md)。
 
 [下载模块](https://github.com/LIghtJUNction/Magicap/releases) · [桌面预览](docs/preview-desktop.png) · [手机预览](docs/preview-mobile.png)
 
@@ -104,7 +104,7 @@ adb forward tcp:8765 tcp:8765
 
 系统证书覆盖的读取方式取决于 Android 版本和应用使用的信任库。对于 Android 14 及之后版本的 Conscrypt APEX 信任库，当前使用方式为：向测试客户端显式导入 CA，并通过客户端的信任配置建立 HTTPS 解密连接。APEX/zygote 证书注入属于独立扩展项。
 
-实机验证覆盖 Android 16 / KernelSU 环境：v0.1.0 已完成安装与重启，v0.1.1 热更新后通过 11 项功能测试。HTTPS 验收使用显式信任本机 CA 的客户端；其他应用的适配以各自的代理和证书信任配置为依据。
+实机验证覆盖 Android 16 / KernelSU 环境：v0.1.0 已完成安装与重启，v0.1.1 已完成用户重启后的检查，v0.1.2 热更新后通过 14 项功能测试。HTTPS 验收使用显式信任本机 CA 的客户端；其他应用的适配以各自的代理和证书信任配置为依据。
 
 ## CLI 常用操作
 

@@ -1,6 +1,31 @@
-# Verification — v0.1.1
+# Verification — v0.1.2
 
-## Android 16 / KernelSU device
+## Post-reboot acceptance and v0.1.2 repair
+
+The user rebooted the Android 16 / KernelSU device with v0.1.1 installed. A changed kernel boot identifier and `sys.boot_completed=1` confirmed the new boot. The module metadata, CLI symlink and file hashes matched the local build; capture and MCP remained disabled. The system certificate overlay matched the device CA, and the CA private key retained mode 0600.
+
+Expanded testing found that MCP `rules_set` incorrectly required `block` for mock and header-rewrite rules. REST accepted the same rules. Marked `block` optional in the shared rule type, preserving its false default, and added local MCP regression cases for mock, rewrite and block rules. v0.1.2 was built locally and hot-updated while services were stopped; this repair used the existing device boot and CA identity.
+
+All 14 final device checks passed:
+
+1. Post-reboot default state.
+2. Installed native binary and WebUI file hashes.
+3. System CA overlay and private-key permissions.
+4. Real HTTP forwarding and request-body preservation.
+5. Persistent rules, request/response header rewriting, blocking and mocking.
+6. Default GET and explicit POST replay.
+7. Full forwarding of a large response and the 1 MiB capture limit.
+8. Real external HTTPS decryption and plaintext capture with explicit client CA trust.
+9. Rejection of a temporary self-signed upstream certificate, confirmed by the x509 diagnostic. The proxy closes this rejected HTTPS connection.
+10. Redesigned WebUI, CA download and runtime version.
+11. HAR content and version metadata.
+12. Custom-port MCP, calls to all seven tools, optional rule fields and idempotent service startup.
+13. Bearer authentication and Origin/Host validation.
+14. Actual tcpdump capture producing a nonempty PCAP.
+
+An initial transport interruption removed adb port mappings while the device boot identifier stayed unchanged. Mappings were restored for the final run. After acceptance, original config/rules, disabled service state and CA identity were verified, and test port mappings and PCAP were cleaned up.
+
+## Earlier v0.1.1 Android 16 / KernelSU checks
 
 The previously installed v0.1.0 module completed a real reboot and was visible at `/data/adb/modules/magicap`. For v0.1.1, WebUI/scripts were synchronized through `kam dev --sync-only --hot`; built binaries and module metadata were updated in place while the daemon was stopped. Device and local arm64 binary SHA-256 matched. No additional reboot was performed for the hot update.
 

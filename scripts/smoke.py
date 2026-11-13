@@ -45,6 +45,13 @@ with tempfile.TemporaryDirectory(prefix='magicap-smoke-') as d:
         call=rpc('tools/call',{'name':'request_replay','arguments':{'url':'http://magicap.test/mock'}});assert not call['result'].get('isError'),call
         call=rpc('tools/call',{'name':'rules_set','arguments':{'rules':[{'match':'magicap.test/mcp','block':True}]}});assert not call['result'].get('isError'),call
         assert json.load(request('/api/rules'))[0]['match']=='magicap.test/mcp'
+        for rules, expected in [
+            ([{'match':'magicap.test/optional','mock_status':202,'mock_body':'optional block'}], 202),
+            ([{'match':'magicap.test/optional','request_headers':{'X-Test':'optional block'}}, {'match':'magicap.test/optional','mock_status':203,'mock_body':'rewrite'}], 203),
+            ([{'match':'magicap.test/optional','block':True}], 403),
+        ]:
+            call=rpc('tools/call',{'name':'rules_set','arguments':{'rules':rules}});assert not call['result'].get('isError'),call
+            result=json.load(request('/api/replay',{'url':'http://magicap.test/optional'},'POST'));assert result['status']==expected,result
         cli('config','--secret','smoke-secret')
         assert b'Magicap' in request('/').read()
         try:request('/api/sessions')

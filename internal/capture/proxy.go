@@ -19,7 +19,7 @@ const SessionLimit = 500
 
 type Rule struct {
 	Match           string            `json:"match"`
-	Block           bool              `json:"block"`
+	Block           bool              `json:"block,omitempty"`
 	RequestHeaders  map[string]string `json:"request_headers,omitempty"`
 	ResponseHeaders map[string]string `json:"response_headers,omitempty"`
 	MockStatus      int               `json:"mock_status,omitempty"`

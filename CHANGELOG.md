@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2
+
+- Make `block` optional in MCP rule input, aligning mock and header-rewrite rules with REST behavior and the existing false default.
+- Add MCP regression coverage for mock, header rewrite and blocking rules.
+- Complete 14 Android 16 / KernelSU acceptance checks after the user's reboot and the repair hot update, including calls to all seven MCP tools, upstream TLS rejection and service-start idempotence.
+
 ## v0.1.1
 
 - Redesign all four WebUI pages with Chinese-only interface text, warm paper, ink and vermilion, fewer borders and more whitespace.
